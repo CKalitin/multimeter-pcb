@@ -24,6 +24,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 
 /* USER CODE END Includes */
 
@@ -52,6 +53,7 @@ UART_HandleTypeDef huart1;
 /* USER CODE BEGIN PV */
 
 int Time_Constant_Capacitance_Measurement(void);
+void Current_Capacitance_Measurement(void);
 
 /* USER CODE END PV */
 
@@ -369,6 +371,12 @@ int Time_Constant_Capacitance_Measurement(void) {
 
     HAL_UART_Transmit(&huart1, (uint8_t*)buffer, total_length_written, HAL_MAX_DELAY);
   }
+}
+
+void Current_Capacitance_Measurement(void) {
+  uint8_t frequency = 10;
+  uint32_t omega_ms = 2 * 3.14159 * frequency; // 2 * pi * 1000 Hz 
+  uint32_t DAC_value = cos(omega_ms * HAL_GetTick() / 1000) * 2048 + 2048; // 12-bit DAC value
 }
 
 /* USER CODE END 4 */

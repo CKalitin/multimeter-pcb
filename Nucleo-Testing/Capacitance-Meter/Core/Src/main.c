@@ -22,6 +22,9 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#include <string.h>
+#include <stdio.h>
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,9 +45,13 @@
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc;
 
+TIM_HandleTypeDef htim16;
+
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
+
+int Time_Constant_Capacitance_Measurement(void);
 
 /* USER CODE END PV */
 
@@ -53,6 +60,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_ADC_Init(void);
+static void MX_TIM16_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -93,14 +101,15 @@ int main(void)
   MX_GPIO_Init();
   MX_USART1_UART_Init();
   MX_ADC_Init();
+  MX_TIM16_Init();
   /* USER CODE BEGIN 2 */
+
+  HAL_TIM_Base_Start(&htim16); // Start the timer for time measurement
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  int iters = 0;
-  uint32_t previousTime = 0;
 
   while (1)
   {
@@ -108,31 +117,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
   
-    // test uart
-    
-    // Send current time to UART using HAL_GetTick()
-    // HAL_GetTick() returns the number of milliseconds since the MCU started
-    int itersMax = 1;
-    if (iters % itersMax == 0) {
-      int itersPerS = itersMax / (HAL_GetTick() - previousTime) * 1000;
-      previousTime = HAL_GetTick();
-
-      // Read ADC1_CH7 value
-      HAL_ADC_Start(&hadc);
-      HAL_ADC_PollForConversion(&hadc, HAL_MAX_DELAY);
-      uint32_t adcValue = HAL_ADC_GetValue(&hadc);
-      HAL_ADC_Stop(&hadc);
-
-      char buffer[100];
-      snprintf(buffer, sizeof(buffer), "Current time: %lu ms, itersPerSecond: %d, adcValue: %lu\r\n", HAL_GetTick(), itersPerS, adcValue);
-      HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);
-
-      HAL_GPIO_TogglePin(TogglePower_GPIO_Port, TogglePower_Pin);
-      HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
-    }
-
-    //HAL_Delay(1000);
-    iters++;
+    Time_Constant_Capacitance_Measurement();
   }
   /* USER CODE END 3 */
 }
@@ -236,6 +221,38 @@ static void MX_ADC_Init(void)
 }
 
 /**
+  * @brief TIM16 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM16_Init(void)
+{
+
+  /* USER CODE BEGIN TIM16_Init 0 */
+
+  /* USER CODE END TIM16_Init 0 */
+
+  /* USER CODE BEGIN TIM16_Init 1 */
+
+  /* USER CODE END TIM16_Init 1 */
+  htim16.Instance = TIM16;
+  htim16.Init.Prescaler = 8-1;
+  htim16.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim16.Init.Period = 65535;
+  htim16.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim16.Init.RepetitionCounter = 0;
+  htim16.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim16) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM16_Init 2 */
+
+  /* USER CODE END TIM16_Init 2 */
+
+}
+
+/**
   * @brief USART1 Initialization Function
   * @param None
   * @retval None
@@ -310,6 +327,49 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+int iters = 0;
+int itersMax = 150;
+uint32_t adcValues[150] = {0}; 
+uint16_t times[150] = {0};
+
+// Output in nC
+int Time_Constant_Capacitance_Measurement(void) {
+  // First charge for 0.1s
+  // Record for 1s and output over uart
+
+  //char buffer[100];
+  //snprintf(buffer, sizeof(buffer), "Capacitance Measurement... %lu\r\n", HAL_GetTick());
+  //HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);
+
+  if (HAL_GetTick() < 1000){
+    HAL_GPIO_WritePin(TogglePower_GPIO_Port, TogglePower_Pin, GPIO_PIN_RESET);
+    return 0;
+  }
+
+  HAL_GPIO_WritePin(TogglePower_GPIO_Port, TogglePower_Pin, GPIO_PIN_SET);
+
+  iters++;
+
+  HAL_ADC_Start(&hadc);
+  HAL_ADC_PollForConversion(&hadc, HAL_MAX_DELAY);
+  adcValues[iters - 1] = HAL_ADC_GetValue(&hadc);
+  HAL_ADC_Stop(&hadc);
+
+  times[iters - 1] = __HAL_TIM_GET_COUNTER(&htim16); // Time since start of measurement
+
+  int total_length_written = 0;
+  if (iters % itersMax == 0){
+    char buffer[2000];
+    for (int i = 0; i < itersMax; i++){
+      int length_written = snprintf(buffer + total_length_written, sizeof(buffer) - total_length_written, "%u,%lu\r\n", times[i], adcValues[i]);
+      total_length_written += length_written;
+    }
+    iters = 0;
+
+    HAL_UART_Transmit(&huart1, (uint8_t*)buffer, total_length_written, HAL_MAX_DELAY);
+  }
+}
 
 /* USER CODE END 4 */
 

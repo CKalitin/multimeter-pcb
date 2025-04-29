@@ -53,7 +53,8 @@ UART_HandleTypeDef huart1;
 /* USER CODE BEGIN PV */
 
 int Time_Constant_Capacitance_Measurement(void);
-void Resistance_Meter(void);
+void Ohmmeter(void);
+void Inductance_Meter(void);
 
 /* USER CODE END PV */
 
@@ -119,7 +120,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
   
-    Resistance_Meter();
+    Inductance_Meter();
   }
   /* USER CODE END 3 */
 }
@@ -373,8 +374,37 @@ int Time_Constant_Capacitance_Measurement(void) {
   }
 }
 
-void Resistance_Meter(void){
+void Ohmmeter(void){
   HAL_GPIO_WritePin(TogglePower_GPIO_Port, TogglePower_Pin, GPIO_PIN_RESET);
+
+  iters++;
+
+  HAL_ADC_Start(&hadc);
+  HAL_ADC_PollForConversion(&hadc, HAL_MAX_DELAY);
+  adcValues[iters - 1] = HAL_ADC_GetValue(&hadc);
+  HAL_ADC_Stop(&hadc);
+
+  times[iters - 1] = __HAL_TIM_GET_COUNTER(&htim16);
+
+  int total_length_written = 0;
+  if (iters % itersMax == 0){
+    char buffer[2000];
+    for (int i = 0; i < itersMax; i++){
+      int length_written = snprintf(buffer + total_length_written, sizeof(buffer) - total_length_written, "%u,%lu\r\n", times[i], adcValues[i]);
+      total_length_written += length_written;
+    }
+    iters = 0;
+
+    HAL_UART_Transmit(&huart1, (uint8_t*)buffer, total_length_written, HAL_MAX_DELAY);
+  }
+}
+
+void Inductance_Meter(void){
+  if (HAL_GetTick() < 1000){
+    HAL_GPIO_WritePin(TogglePower_GPIO_Port, TogglePower_Pin, GPIO_PIN_RESET);
+  } else {
+    HAL_GPIO_WritePin(TogglePower_GPIO_Port, TogglePower_Pin, GPIO_PIN_SET);
+  }
 
   iters++;
 

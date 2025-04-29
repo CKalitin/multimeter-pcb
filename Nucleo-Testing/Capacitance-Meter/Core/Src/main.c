@@ -53,7 +53,7 @@ UART_HandleTypeDef huart1;
 /* USER CODE BEGIN PV */
 
 int Time_Constant_Capacitance_Measurement(void);
-void Current_Capacitance_Measurement(void);
+void Resistance_Meter(void);
 
 /* USER CODE END PV */
 
@@ -119,7 +119,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
   
-    Time_Constant_Capacitance_Measurement();
+    Resistance_Meter();
   }
   /* USER CODE END 3 */
 }
@@ -358,7 +358,7 @@ int Time_Constant_Capacitance_Measurement(void) {
   adcValues[iters - 1] = HAL_ADC_GetValue(&hadc);
   HAL_ADC_Stop(&hadc);
 
-  times[iters - 1] = __HAL_TIM_GET_COUNTER(&htim16); // Time since start of measurement
+  times[iters - 1] = __HAL_TIM_GET_COUNTER(&htim16);
 
   int total_length_written = 0;
   if (iters % itersMax == 0){
@@ -373,10 +373,29 @@ int Time_Constant_Capacitance_Measurement(void) {
   }
 }
 
-void Current_Capacitance_Measurement(void) {
-  uint8_t frequency = 10;
-  uint32_t omega_ms = 2 * 3.14159 * frequency; // 2 * pi * 1000 Hz 
-  uint32_t DAC_value = cos(omega_ms * HAL_GetTick() / 1000) * 2048 + 2048; // 12-bit DAC value
+void Resistance_Meter(void){
+  HAL_GPIO_WritePin(TogglePower_GPIO_Port, TogglePower_Pin, GPIO_PIN_RESET);
+
+  iters++;
+
+  HAL_ADC_Start(&hadc);
+  HAL_ADC_PollForConversion(&hadc, HAL_MAX_DELAY);
+  adcValues[iters - 1] = HAL_ADC_GetValue(&hadc);
+  HAL_ADC_Stop(&hadc);
+
+  times[iters - 1] = __HAL_TIM_GET_COUNTER(&htim16);
+
+  int total_length_written = 0;
+  if (iters % itersMax == 0){
+    char buffer[2000];
+    for (int i = 0; i < itersMax; i++){
+      int length_written = snprintf(buffer + total_length_written, sizeof(buffer) - total_length_written, "%u,%lu\r\n", times[i], adcValues[i]);
+      total_length_written += length_written;
+    }
+    iters = 0;
+
+    HAL_UART_Transmit(&huart1, (uint8_t*)buffer, total_length_written, HAL_MAX_DELAY);
+  }
 }
 
 /* USER CODE END 4 */

@@ -61,7 +61,7 @@ main-build: Capacitance-Meter.elf secondary-outputs
 
 # Tool invocations
 Capacitance-Meter.elf Capacitance-Meter.map: $(OBJS) $(USER_OBJS) C:\_Dev\multimeter-pcb\Nucleo-Testing\Capacitance-Meter\STM32F031K6TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "Capacitance-Meter.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m0 -T"C:\_Dev\multimeter-pcb\Nucleo-Testing\Capacitance-Meter\STM32F031K6TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Capacitance-Meter.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+	arm-none-eabi-gcc -o "Capacitance-Meter.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m0 -T"C:\_Dev\multimeter-pcb\Nucleo-Testing\Capacitance-Meter\STM32F031K6TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Capacitance-Meter.map" -Wl,--gc-sections -static -u _printf_long_long --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

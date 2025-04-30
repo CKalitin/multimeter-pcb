@@ -25,6 +25,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
+#include <inttypes.h>
 
 /* USER CODE END Includes */
 
@@ -55,6 +56,8 @@ UART_HandleTypeDef huart1;
 int Time_Constant_Capacitance_Measurement(void);
 void Ohmmeter(void);
 void Inductance_Meter(void);
+void Print_Averaged_ADC_Value(void);
+int Get_ADC_Value(void);
 
 /* USER CODE END PV */
 
@@ -120,7 +123,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
   
-    Inductance_Meter();
+    Print_Averaged_ADC_Value();
   }
   /* USER CODE END 3 */
 }
@@ -210,7 +213,7 @@ static void MX_ADC_Init(void)
 
   /** Configure for the selected ADC regular channel to be converted.
   */
-  sConfig.Channel = ADC_CHANNEL_7;
+  sConfig.Channel = ADC_CHANNEL_1;
   sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
   sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
   if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
@@ -332,18 +335,14 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 
 int iters = 0;
-int itersMax = 150;
-uint32_t adcValues[150] = {0}; 
-uint16_t times[150] = {0};
+int itersMax = 100;
+uint32_t adcValues[100] = {0}; 
+uint16_t times[1] = {0};
 
 // Output in nC
 int Time_Constant_Capacitance_Measurement(void) {
   // First charge for 0.1s
   // Record for 1s and output over uart
-
-  //char buffer[100];
-  //snprintf(buffer, sizeof(buffer), "Capacitance Measurement... %lu\r\n", HAL_GetTick());
-  //HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);
 
   if (HAL_GetTick() < 1000){
     HAL_GPIO_WritePin(TogglePower_GPIO_Port, TogglePower_Pin, GPIO_PIN_RESET);
@@ -426,6 +425,75 @@ void Inductance_Meter(void){
 
     HAL_UART_Transmit(&huart1, (uint8_t*)buffer, total_length_written, HAL_MAX_DELAY);
   }
+}
+
+void Print_Averaged_ADC_Value(void) {
+  // First, collect 100 samples in array
+  // when full, calculate average and print to UART
+
+  iters++;
+  adcValues[iters - 1] = Get_ADC_Value();
+
+  if (iters % itersMax == 0){
+    // Calculate average
+    uint32_t sum = 0;
+    for (int i = 0; i < itersMax; i++){
+      sum += adcValues[i];
+    }
+    int average = sum / itersMax;
+
+    // Print to UART
+    char buffer[50];
+    int length_written = snprintf(buffer, sizeof(buffer), "Average ADC Value: %d\r\n", average);
+    HAL_UART_Transmit(&huart1, (uint8_t*)buffer, length_written, HAL_MAX_DELAY);
+
+    iters = 0; // Reset the counter
+  }
+}
+
+int Get_ADC_Value(void){
+  HAL_ADC_Start(&hadc);
+  HAL_ADC_PollForConversion(&hadc, HAL_MAX_DELAY);
+  int64_t adcValue = (int64_t)HAL_ADC_GetValue(&hadc);
+  HAL_ADC_Stop(&hadc);
+
+  if (adcValue == 0) {
+    return 0;
+  }
+
+  //int adcErrorTerm = (int)(2.994 + (1.730E-01 * adcValue) - (1.295E-04 * pow(adcValue, 2)) + (1.613E-08 * pow(adcValue, 3)));
+
+  // All constant multiplied by 1E11 to avoid floating point arithmetic
+  int64_t preadcErrorTerm = (int64_t)(299400000000 + (17300000000 * adcValue) - (12950000 * adcValue * adcValue) + (1613 * adcValue * adcValue * adcValue));
+  //adcErrorTerm = adcErrorTerm / 1E11;
+  //int64_t adcErrorTerm = 0;
+
+  int32_t adcErrorTerm = (int32_t)(preadcErrorTerm / 1E11);
+
+  // max: 922337200000000000
+  int64_t term1 = (int64_t)2994000000000LL; 
+  int64_t term2 = (int64_t)17300000000LL * (int64_t)adcValue;
+  int64_t term3 = (int64_t)12950000LL * (int64_t)adcValue * (int64_t)adcValue;
+  int64_t term4 = (int64_t)1613LL * (int64_t)adcValue * (int64_t)adcValue * (int64_t)adcValue;
+  
+  // Log only each 64-bit component
+  char buffer[200];
+  int length_written = snprintf(buffer, sizeof(buffer),
+    "ADC: %ld, T1: %lu|%lu, T2: %lu|%lu, T3: %lu|%lu, T4: %lu|%lu\r\n",
+    adcErrorTerm,
+    (uint32_t)(term1 >> 32), (uint32_t)(term1),
+    (uint32_t)(term2 >> 32), (uint32_t)(term2),
+    (uint32_t)(term3 >> 32), (uint32_t)(term3),
+    (uint32_t)(term4 >> 32), (uint32_t)(term4)
+  );
+  HAL_UART_Transmit(&huart1, (uint8_t*)buffer, length_written, HAL_MAX_DELAY);
+
+
+  if (adcValue - adcErrorTerm > 5000){
+    return 0;
+  }
+
+  return adcValue - adcErrorTerm;
 }
 
 /* USER CODE END 4 */

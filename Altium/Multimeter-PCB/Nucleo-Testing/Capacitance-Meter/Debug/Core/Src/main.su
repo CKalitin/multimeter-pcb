@@ -1,0 +1,12 @@
+../Core/Src/main.c:83:5:main	8	static
+../Core/Src/main.c:135:6:SystemClock_Config	96	static
+../Core/Src/main.c:180:13:MX_ADC_Init	24	static
+../Core/Src/main.c:234:13:MX_TIM16_Init	8	static
+../Core/Src/main.c:266:13:MX_USART1_UART_Init	8	static
+../Core/Src/main.c:301:13:MX_GPIO_Init	48	static
+../Core/Src/main.c:343:5:Time_Constant_Capacitance_Measurement	2048	static
+../Core/Src/main.c:376:6:Ohmmeter	2048	static
+../Core/Src/main.c:401:6:Inductance_Meter	2048	static
+../Core/Src/main.c:430:6:Print_Averaged_ADC_Value	80	static
+../Core/Src/main.c:454:5:Get_ADC_Value	408	static
+../Core/Src/main.c:501:6:Error_Handler	8	static,ignoring_inline_asm

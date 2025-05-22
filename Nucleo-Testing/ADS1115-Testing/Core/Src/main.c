@@ -120,10 +120,18 @@ int main(void)
   ADS1115_Init();
   HAL_Delay(100);
 
+  HAL_StatusTypeDef status = HAL_I2C_IsDeviceReady(&hi2c1, ADS1115_ADDR, 1, HAL_MAX_DELAY);
+  char msg[50];
+  sprintf(msg, "ADS1115 Status: %d\r\n", status);
+  HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  uint16_t iters = 0;
+  uint32_t previous_time;
+
   while (1)
   {
     /* USER CODE END WHILE */
@@ -131,6 +139,21 @@ int main(void)
     /* USER CODE BEGIN 3 */
 
     ADS1115_Read(); // Read the ADC value
+    iters++;
+    if (HAL_GetTick() - previous_time > 1000) {
+      HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+
+      previous_time = HAL_GetTick();
+
+      sprintf(msg, "ADC Value: %d\r\n", ADS1115_Read());
+      HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+
+      // print number iters in one second
+      sprintf(msg, "Iterations per second: %d\r\n", iters);
+      HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+
+      iters = 0;
+    }
   }
   /* USER CODE END 3 */
 }
@@ -303,10 +326,11 @@ static int16_t ADS1115_Read(void) {
   uint8_t buf[2];
   I2C_Receive(&hi2c1, ADS1115_ADDR, buf, sizeof(buf), HAL_MAX_DELAY);
   int16_t ads_data = (buf[0] << 8) | buf[1]; // Combine the two bytes into a single 16-bit value
+  int32_t ads_voltage = ads_data * 8.192 * 1000000 / 65536; // Output in uV to get full precision, going to need to dynamically change the full scale range of the ADC and this variable
   char msg[50];
-  snprintf(msg, sizeof(msg), "ADC Value: %d\r\n", ads_data);
-  HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);  
-  return ads_data;
+  snprintf(msg, sizeof(msg), "ADC Value: %ld\r\n", ads_voltage);
+  //HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);  
+  return (int16_t)(ads_voltage/1000);
 }
 
 static HAL_StatusTypeDef I2C_Transmit(I2C_HandleTypeDef* hi2c, uint16_t DevAddress, uint8_t* pData, uint16_t Size, uint32_t Timeout)

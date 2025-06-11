@@ -6,6 +6,6 @@ May 21 State of the PCB:
 
 # .plan
 
-1. Fill BOM
-2. Order PCB & Parts
-3. Test multiple ADS1115's on one I2C bus in the meantime waiting for shipping
+1. Test multiple ADS1115's on one I2C bus in the meantime waiting for shipping
+2. Assemble PCB
+3. Write firmware (Good firmware! DMA!)

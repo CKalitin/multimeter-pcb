@@ -6,8 +6,6 @@ May 21 State of the PCB:
 
 # .plan
 
-1. Pick a current sensor IC
-2. Pick connector for current/voltage inputs (banana plug compatible with aligator)
-3. Design remaining parts of the PCB
-4. Fill BOM
-5. Order PCB & Parts
+1. Fill BOM
+2. Order PCB & Parts
+3. Test multiple ADS1115's on one I2C bus in the meantime waiting for shipping

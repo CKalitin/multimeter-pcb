@@ -116,6 +116,11 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   
+  while (1){
+	  HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+	  HAL_Delay(500);
+  }
+
   HAL_Delay(100);
   ADS1115_Init();
   HAL_Delay(100);

@@ -1,0 +1,3 @@
+../Core/Src/task_ads1115.c:12:6:StartBlink01	16	static
+../Core/Src/task_ads1115.c:25:6:StartBlink02	16	static
+../Core/Src/task_ads1115.c:38:6:ADS1115_Tasks_Init	16	static

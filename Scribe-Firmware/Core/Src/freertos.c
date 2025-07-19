@@ -46,12 +46,26 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
 
+// NOTE:
+// osThreadId_t is a typedef in cmsis_os2.h
+// It is a wrapper around FreeRTOS TaskHandle_t
+// So, for all my custom tasks I use TaskHandle_t while here STM32 CubeIDE uses osThreadId_t
+
 /* USER CODE END Variables */
+/* Definitions for HeartbeatTask */
+osThreadId_t HeartbeatTaskHandle;
+const osThreadAttr_t HeartbeatTask_attributes = {
+  .name = "HeartbeatTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityRealtime,
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
 
 /* USER CODE END FunctionPrototypes */
+
+void StartHeartbeatTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -81,6 +95,10 @@ void MX_FREERTOS_Init(void) {
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
 
+  /* Create the thread(s) */
+  /* creation of HeartbeatTask */
+  HeartbeatTaskHandle = osThreadNew(StartHeartbeatTask, NULL, &HeartbeatTask_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* Tasks are now created manually in individual task files */
   /* USER CODE END RTOS_THREADS */
@@ -89,6 +107,25 @@ void MX_FREERTOS_Init(void) {
   /* add events, ... */
   /* USER CODE END RTOS_EVENTS */
 
+}
+
+/* USER CODE BEGIN Header_StartHeartbeatTask */
+/**
+  * @brief  Function implementing the HeartbeatTask thread.
+  * @param  argument: Not used
+  * @retval None
+  */
+/* USER CODE END Header_StartHeartbeatTask */
+void StartHeartbeatTask(void *argument)
+{
+  /* USER CODE BEGIN StartHeartbeatTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);  // Toggle LED pin
+    osDelay(250); // Only use osDelay() here for cmsis tasks, everywhere else use raw FreeRTOS vTaskDelay()
+  }
+  /* USER CODE END StartHeartbeatTask */
 }
 
 /* Private application code --------------------------------------------------*/

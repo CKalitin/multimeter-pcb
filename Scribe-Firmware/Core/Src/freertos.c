@@ -123,7 +123,7 @@ void StartHeartbeatTask(void *argument)
   for(;;)
   {
     HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);  // Toggle LED pin
-    osDelay(250); // Only use osDelay() here for cmsis tasks, everywhere else use raw FreeRTOS vTaskDelay()
+    osDelay(1000); // Only use osDelay() here for cmsis tasks, everywhere else use raw FreeRTOS vTaskDelay()
   }
   /* USER CODE END StartHeartbeatTask */
 }
